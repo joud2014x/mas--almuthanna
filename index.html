@@ -1,0 +1,49 @@
+doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مسابقة المثنّى</title>
+<style>
+:root{--purple:#7554a8;--lav:#e9def8;--cream:#fff7e8;--ink:#352947;--gold:#e6d2a2}
+*{box-sizing:border-box}body{margin:0;font-family:Tahoma,Arial,sans-serif;background:linear-gradient(135deg,#f8f1ff,#fff9ec);color:var(--ink);text-align:center}
+header{padding:22px 12px 8px}h1{margin:0;color:var(--purple);font-size:clamp(28px,5vw,42px)}.sub{margin:8px}
+.wrap{max-width:850px;margin:auto;padding:12px}
+.teams{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+.team{background:#fff;border:2px solid #d8c9f1;border-radius:20px;padding:12px;box-shadow:0 5px 0 #e9def7}.team.vanilla{border-color:var(--gold);box-shadow:0 5px 0 #f5e8c4}
+.team h2{font-size:18px;margin:4px}.score{font-size:34px;font-weight:bold;color:var(--purple);margin:4px}
+button{font-family:inherit;border:0;border-radius:13px;padding:12px 15px;font-size:17px;font-weight:bold;cursor:pointer}
+.plus{background:var(--purple);color:white}.minus{background:#f1eafa;color:var(--ink);margin-right:4px}
+.card{background:white;border:2px solid #e4d8f5;border-radius:24px;padding:20px 14px;margin:12px 0;box-shadow:0 7px 0 #eee5f8}
+.progress{color:#8a72ac;font-weight:bold}.question{font-size:clamp(21px,4vw,30px);font-weight:bold;margin:14px 0 20px}
+.answers{display:grid;gap:10px;max-width:600px;margin:auto}.answer{background:#f1eafa;color:#38274e;border:2px solid #e2d5f4}.answer:disabled{cursor:default;opacity:1}.answer.correct{background:#dff4df;border-color:#7cbd7c}.answer.wrong{background:#ffe1e1;border-color:#e99}
+.feedback{font-size:18px;font-weight:bold;min-height:32px;margin:13px}.next{background:var(--purple);color:#fff}.secondary{background:#fff;border:2px solid #ddd0ef;color:var(--ink)}
+.controls{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px}.note{font-size:13px;opacity:.85;margin:14px}
+</style></head><body>
+<header><h1>مسابقة المثنّى 🎀</h1><p class="sub">جاوبوا عن الأسئلة، وزيدوا نقاط الفريق صاحب الإجابة الصحيحة! 💜🤍</p></header>
+<div class="wrap">
+<div class="teams">
+<div class="team"><h2>💜 فريق اللافندر</h2><div class="score" id="s1">0</div><button class="plus" onclick="score(1,1)">+ نقطة</button><button class="minus" onclick="score(1,-1)">− نقطة</button></div>
+<div class="team vanilla"><h2>🤍 فريق الفانيلا</h2><div class="score" id="s2">0</div><button class="plus" onclick="score(2,1)">+ نقطة</button><button class="minus" onclick="score(2,-1)">− نقطة</button></div>
+</div>
+<div class="card"><div class="progress" id="progress">السؤال 1 من 8</div><div class="question" id="question"></div><div class="answers" id="answers"></div><div class="feedback" id="feedback"></div>
+<div class="controls"><button class="secondary" onclick="resetGame()">🔄 إعادة المسابقة</button><button class="next" onclick="nextQ()">السؤال التالي ←</button></div></div>
+<div class="note">طريقة اللعب: اختاروا الإجابة، ثم أضيفوا نقطة للفريق الذي أجاب إجابة صحيحة. يمكنكم تعديل النقاط يدويًا.</div>
+</div>
+<script>
+const qs=[
+{q:'ما مثنّى كلمة «قلم»؟',a:['قلمان','أقلام','قلمون'],c:0,why:'قلم ← قلمان.'},
+{q:'ما علامة رفع المثنّى؟',a:['الواو','الألف','الياء'],c:1,why:'يرفع المثنّى بالألف.'},
+{q:'أيّ كلمة مما يأتي مثنّى؟',a:['الطالبات','الطالبتان','الطالب'],c:1,why:'الطالبتان تدلّان على اثنتين.'},
+{q:'ما مثنّى كلمة «زهرة»؟',a:['زهرتان','زهرات','زهرتين فقط'],c:0,why:'في حالة الرفع: زهرتان.'},
+{q:'ما علامة نصب وجر المثنّى؟',a:['الألف','الضمة','الياء'],c:2,why:'ينصب ويجرّ المثنّى بالياء.'},
+{q:'صح أم خطأ: «رأيتُ الطالبان» جملة صحيحة.',a:['صح','خطأ'],c:1,why:'الصواب: رأيتُ الطالبين.'},
+{q:'أكملي: سلّمتُ على ____.',a:['الطالبان','الطالبين','الطالبون'],c:1,why:'بعد «على» اسم مجرور، وعلامة جرّ المثنّى الياء.'},
+{q:'أكملي: حضرَ ____ إلى الصف.',a:['المعلمان','المعلمين','المعلمات'],c:0,why:'المعلمان فاعل مرفوع بالألف.'}
+];let idx=0,scores=[0,0],locked=false;
+function render(){locked=false;document.getElementById('progress').textContent=`السؤال ${idx+1} من ${qs.length}`;document.getElementById('question').textContent=qs[idx].q;document.getElementById('feedback').textContent='';let box=document.getElementById('answers');box.innerHTML='';qs[idx].a.forEach((a,i)=>{let b=document.createElement('button');b.className='answer';b.textContent=['أ','ب','ج'][i]+'. '+a;b.onclick=()=>answer(i,b);box.appendChild(b)});}
+function answer(i,btn){if(locked)return;locked=true;let all=[...document.querySelectorAll('.answer')];all.forEach(b=>b.disabled=true);all[qs[idx].c].classList.add('correct');if(i===qs[idx].c){document.getElementById('feedback').textContent='إجابة صحيحة! 🎉 '+qs[idx].why;}else{btn.classList.add('wrong');document.getElementById('feedback').textContent='الإجابة الصحيحة: '+qs[idx].a[qs[idx].c]+'. '+qs[idx].why;}}
+function score(t,d){scores[t-1]=Math.max(0,scores[t-1]+d);document.getElementById('s'+t).textContent=scores[t-1];}
+function nextQ(){if(idx<qs.length-1){idx++;render()}else{document.getElementById('progress').textContent='انتهت المسابقة!';document.getElementById('question').textContent=scores[0]===scores[1]?'تعادل! أحسنتنّ الفريقان 🤍💜':scores[0]>scores[1]?'🏆 فاز فريق اللافندر!':'🏆 فاز فريق الفانيلا!';document.getElementById('answers').innerHTML='';document.getElementById('feedback').textContent=`النتيجة النهائية: اللافندر ${scores[0]} — الفانيلا ${scores[1]}`;locked=true;}}
+function resetGame(){idx=0;scores=[0,0];document.getElementById('s1').textContent='0';document.getElementById('s2').textContent='0';render()}
+render();
+</script></body></html>
