@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مسابقة المثنى مع الجرس</title>
+<style>
+:root{--purple:#7554a8;--lav:#e9def8;--cream:#fff7e8;--ink:#352947;--gold:#e6d2a2}
+*{box-sizing:border-box}body{margin:0;font-family:Tahoma,Arial,sans-serif;background:linear-gradient(135deg,#f8f1ff,#fff9ec);color:var(--ink);text-align:center}
+header{padding:20px 12px 4px}h1{margin:0;color:var(--purple);font-size:clamp(27px,5vw,40px)}.sub{margin:8px}
+.wrap{max-width:850px;margin:auto;padding:12px}.card{background:#fff;border:2px solid #e4d8f5;border-radius:24px;padding:20px 14px;margin:12px 0;box-shadow:0 7px 0 #eee5f8}
+button{font-family:inherit;border:0;border-radius:15px;padding:13px 17px;font-size:17px;font-weight:bold;cursor:pointer}
+.purple{background:var(--purple);color:#fff}.vanilla{background:var(--cream);color:var(--ink);border:2px solid var(--gold)}.soft{background:#fff;border:2px solid #ddd0ef;color:var(--ink)}
+.bell{font-size:clamp(90px,22vw,160px);width:min(75vw,280px);height:min(75vw,280px);border-radius:50%;display:block;margin:18px auto;box-shadow:0 9px 0 #d8c9f1;border:8px solid white}
+.bell:active{transform:scale(.97)}.big{font-size:clamp(25px,5vw,38px);font-weight:bold}.muted{opacity:.8;line-height:1.8}
+.hidden{display:none!important}.teams{display:grid;grid-template-columns:1fr 1fr;gap:12px}.team{background:#fff;border:2px solid #d8c9f1;border-radius:18px;padding:12px}.team.v{border-color:var(--gold)}.score{font-size:34px;font-weight:bold}
+.question{font-size:clamp(22px,4vw,32px);font-weight:bold;line-height:1.6;margin:18px 0}.answers{display:grid;gap:9px;max-width:600px;margin:auto}.answer{background:#f1eafa;color:#38274e;border:2px solid #e2d5f4}.answer:disabled{opacity:1}.correct{background:#dff4df!important;border-color:#7cbd7c!important}.wrong{background:#ffe1e1!important}
+.status{padding:15px;border-radius:16px;background:#f5effc;font-size:22px;font-weight:bold;margin:12px 0}.winner{font-size:clamp(30px,6vw,46px);font-weight:bold;margin:18px}
+label{display:block;margin:10px;font-weight:bold}input{font:inherit;padding:12px;border:1px solid #d7c6e7;border-radius:10px;width:min(100%,450px);direction:ltr}
+@media(max-width:560px){.teams{grid-template-columns:1fr}.card{padding:16px 10px}}
+</style>
+</head>
+<body>
+<header><h1>مسابقة المثنى مع الجرس 🔔</h1><p class="sub">جرس اللافندر 💜 وجرس الفانيلا 🤍</p></header>
+<div class="wrap">
+ <section class="card" id="setup">
+  <div class="big">صفحة إدارة المسابقة</div>
+  <p class="muted">هذه الصفحة للمقدّمة وشاشة العرض. روابط الأجراس الخاصة بالفرق منفصلة.</p>
+  <button class="purple" onclick="setMode('host')">👑 التحكم والعرض</button>
+  <button class="soft" onclick="setMode('screen')">🖥️ شاشة العرض فقط</button>
+  <button class="purple" onclick="setMode('lavender')">💜 جرس اللافندر</button>
+  <button class="vanilla" onclick="setMode('vanilla')">🤍 جرس الفانيلا</button>
+  <div class="muted" style="margin-top:14px">استخدمي روابط ملفات الأجراس المنفصلة للفرق، ولا تشاركي رابط هذه الصفحة مع الفريقين.</div>
+ </section>
+
+ <section class="card hidden" id="config">
+  <div class="big">إعداد الاتصال المشترك (للمقدّمة فقط)</div>
+  <p class="muted">قبل أن تعمل المزامنة، يجب إنشاء مشروع Firebase Realtime Database ولصق إعدادات الويب التي يعطيك إياها Firebase داخل موضع FIREBASE_CONFIG في الكود. لا تضعي أي مفاتيح سرية هنا.</p>
+  <button class="soft" onclick="showSetup()">رجوع</button>
+ </section>
+
+ <section class="card hidden" id="bellPage">
+  <div class="big" id="teamTitle"></div>
+  <p class="muted">اضغطي مرة واحدة عند ظهور السؤال. أول فريق يضغط يُقفل الجرس للفريق الآخر.</p>
+  <button id="bell" class="bell purple" onclick="pressBell()">🔔</button>
+  <div id="bellStatus" class="status">انتظري بدء السؤال من مقدّمة المسابقة…</div>
+ </section>
+
+ <section class="hidden" id="screenPage">
+  <div id="screenHeading" class="big" style="margin:12px 0">🖥️ شاشة العرض — تظهر الأسئلة والنتائج</div>
+  <div class="teams">
+   <div class="team"><h2>💜 فريق اللافندر</h2><div class="score" id="s1">0</div></div>
+   <div class="team v"><h2>🤍 فريق الفانيلا</h2><div class="score" id="s2">0</div></div>
+  </div>
+  <div class="card">
+   <div id="progress" class="muted">السؤال 1 من 8</div>
+   <div id="question" class="question">اضغطي «ابدئي السؤال» لبدء المسابقة.</div>
+   <div id="answers" class="answers"></div>
+   <div id="winner" class="winner"></div>
+   <div id="feedback" class="muted"></div>
+   <div id="hostControls" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px">
+    <button class="purple" onclick="startQuestion()">ابدئي السؤال / افتحي الجرس 🔔</button>
+    <button class="purple" onclick="nextQuestion()">السؤال التالي ←</button>
+    <button class="soft" onclick="addPoint(1)">+ نقطة للافندر</button>
+    <button class="vanilla" onclick="addPoint(2)">+ نقطة للفانيلا</button>
+    <button class="soft" onclick="resetGame()">إعادة المسابقة</button>
+   </div>
+  </div>
+  <p class="muted">ملاحظة: شاشة العرض للعرض فقط، والتحكم يكون من جهازك أنتِ. يلزم إعداد Firebase مرة واحدة لتتصل الأجهزة ببعض.</p>
+ </section>
+</div>
+<script>
+/*
+ إعداد الاتصال:
+ 1) أنشئي مشروع Firebase ثم فعّلي Realtime Database.
+ 2) أنشئي تطبيق Web وانسخي كائن firebaseConfig الذي يوفره Firebase.
+ 3) الصقي القيم في FIREBASE_CONFIG أدناه.
+ 4) فعّلي قواعد قراءة/كتابة مناسبة للاستخدام التجريبي فقط، ولا تنشري بيانات خاصة.
+ 5) انشري هذا الملف على استضافة HTTPS.
+*/
+const FIREBASE_CONFIG = null; // استبدلي null بإعدادات تطبيق Firebase: {apiKey:"...",authDomain:"...",databaseURL:"...",projectId:"...",appId:"..."}
+const qs=[
+{q:'ما مثنّى كلمة «قلم»؟',a:['قلمان','أقلام','قلمون'],c:0,why:'قلم ← قلمان.'},
+{q:'ما علامة رفع المثنّى؟',a:['الواو','الألف','الياء'],c:1,why:'يرفع المثنّى بالألف.'},
+{q:'أيّ كلمة مما يأتي مثنّى؟',a:['الطالبات','الطالبتان','الطالب'],c:1,why:'الطالبتان تدلّان على اثنتين.'},
+{q:'ما مثنّى كلمة «زهرة»؟',a:['زهرتان','زهرات','زهرتين فقط'],c:0,why:'في حالة الرفع: زهرتان.'},
+{q:'ما علامة نصب وجر المثنّى؟',a:['الألف','الضمة','الياء'],c:2,why:'ينصب ويجرّ المثنّى بالياء.'},
+{q:'صح أم خطأ: «رأيتُ الطالبان» جملة صحيحة.',a:['صح','خطأ'],c:1,why:'الصواب: رأيتُ الطالبين.'},
+{q:'أكملي: سلّمتُ على ____.',a:['الطالبان','الطالبين','الطالبون'],c:1,why:'بعد «على» اسم مجرور، وعلامة جرّ المثنّى الياء.'},
+{q:'أكملي: حضرَ ____ إلى الصف.',a:['المعلمان','المعلمين','المعلمات'],c:0,why:'المعلمان فاعل مرفوع بالألف.'}
+];
+let mode='screen',idx=0,scores=[0,0],locked=true,claimed='',db=null,fb=null,watching=false;
+function setMode(m){mode=m;document.getElementById('screenHeading').textContent=m==='host'?'👑 لوحة تحكّم مقدّمة المسابقة':'🖥️ شاشة العرض — تظهر الأسئلة والنتائج';document.getElementById('setup').classList.add('hidden');document.getElementById('screenPage').classList.toggle('hidden',!(m==='screen'||m==='host'));document.getElementById('bellPage').classList.toggle('hidden',m==='screen'||m==='host');document.getElementById('hostControls').classList.toggle('hidden',m!=='host');document.getElementById('teamTitle').textContent=m==='lavender'?'💜 فريق اللافندر':'🤍 فريق الفانيلا';document.getElementById('bell').className='bell '+(m==='lavender'?'purple':'vanilla');if(m!=='screen')setBellStatus('انتظري بدء السؤال من مقدّمة المسابقة…');if(!FIREBASE_CONFIG){document.getElementById('config').classList.remove('hidden');}else initFirebase();}
+function showSetup(){document.getElementById('config').classList.add('hidden');document.getElementById('setup').classList.remove('hidden');document.getElementById('screenPage').classList.add('hidden');document.getElementById('bellPage').classList.add('hidden')}
+function setBellStatus(s){const e=document.getElementById('bellStatus');if(e)e.textContent=s}
+async function initFirebase(){
+ if(fb)return;
+ try{
+  const appMod=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
+  const dbMod=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
+  const app=appMod.initializeApp(FIREBASE_CONFIG);db=dbMod.getDatabase(app);fb=dbMod;
+  const stateRef=fb.ref(db,'mutannaBuzzer/state');
+  fb.onValue(stateRef,snap=>{const s=snap.val()||{};locked=!!s.locked;claimed=s.claimed||'';idx=Number.isInteger(s.idx)?s.idx:0;scores=Array.isArray(s.scores)?s.scores:[0,0];renderScreen();if(mode!=='screen')setBellStatus(!s.active?'انتظري بدء السؤال من مقدّمة المسابقة…':claimed?('الفريق الفائز بالجرس: '+teamName(claimed)):'اضغطي الجرس الآن!');});
+  watching=true;
+ }catch(e){alert('تعذر الاتصال بـ Firebase. تأكدي من الإعدادات ورابط قاعدة البيانات.');console.error(e)}
+}
+function teamName(t){return t==='lavender'?'💜 فريق اللافندر':'🤍 فريق الفانيلا'}
+async function updateState(patch){if(!db||!fb){alert('يلزم إعداد Firebase أولًا لتفعيل الاتصال بين الأجهزة.');return}const r=fb.ref(db,'mutannaBuzzer/state');await fb.update(r,patch)}
+async function pressBell(){
+ if(mode==='screen'||mode==='host')return;
+ if(!db||!fb){setBellStatus('يلزم إعداد الاتصال المشترك (للمقدّمة فقط) أولًا.');return}
+ const team=mode;const r=fb.ref(db,'mutannaBuzzer/state');
+ try{const result=await fb.runTransaction(r,current=>{if(!current||!current.active||current.claimed)return;current.claimed=team;current.locked=true;return current});if(result.committed)setBellStatus('🎉 ضغطتِ أولًا! '+teamName(team));else setBellStatus('سبقك الفريق الآخر أو لم يبدأ السؤال بعد.');}catch(e){setBellStatus('تعذر إرسال الضغط. تحققي من الاتصال.')}
+}
+function renderScreen(){
+ if(mode!=='screen'&&mode!=='host')return;
+ document.getElementById('s1').textContent=scores[0];document.getElementById('s2').textContent=scores[1];
+ document.getElementById('progress').textContent='السؤال '+(idx+1)+' من '+qs.length;
+ document.getElementById('question').textContent=qs[idx]?.q||'انتهت المسابقة!';
+ document.getElementById('winner').textContent=claimed?'🔔 '+teamName(claimed):'';
+ const box=document.getElementById('answers');box.innerHTML='';
+ if(qs[idx])qs[idx].a.forEach((a,i)=>{const b=document.createElement('button');b.className='answer';b.textContent=['أ','ب','ج'][i]+'. '+a;b.onclick=()=>{document.getElementById('feedback').textContent=(i===qs[idx].c?'إجابة صحيحة! 🎉 ':'الإجابة الصحيحة: '+qs[idx].a[qs[idx].c]+'. ')+qs[idx].why};box.appendChild(b)});
+}
+async function startQuestion(){idx=Math.min(idx,qs.length-1);claimed='';locked=false;document.getElementById('feedback').textContent='';if(!db||!fb){alert('أكملي إعداد Firebase أولًا حتى تصل إشارة بدء السؤال إلى جهازي الفريقين.');return}await updateState({idx,claimed:'',locked:false,active:true,scores});}
+async function nextQuestion(){if(idx<qs.length-1){idx++;claimed='';locked=true;document.getElementById('feedback').textContent='';if(db&&fb)await updateState({idx,claimed:'',locked:true,active:false,scores});renderScreen()}else{document.getElementById('question').textContent=scores[0]===scores[1]?'تعادل! أحسنتنّ الفريقان 🤍💜':scores[0]>scores[1]?'🏆 فاز فريق اللافندر!':'🏆 فاز فريق الفانيلا!';document.getElementById('answers').innerHTML='';document.getElementById('winner').textContent=`النتيجة النهائية: اللافندر ${scores[0]} — الفانيلا ${scores[1]}`;if(db&&fb)await updateState({active:false,locked:true})}}
+async function addPoint(t){scores[t-1]++;renderScreen();if(db&&fb)await updateState({scores})}
+async function resetGame(){idx=0;scores=[0,0];claimed='';locked=true;document.getElementById('feedback').textContent='';if(db&&fb)await updateState({idx,scores,claimed:'',locked:true,active:false});renderScreen()}
+const params=new URLSearchParams(location.search);const initial=params.get('mode');
+if(initial==='screen')setMode('screen');else setMode('host');
+</script>
+</body></html>

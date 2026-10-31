@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مسابقة المثنى مع الجرس</title>
+<style>
+:root{--purple:#7554a8;--lav:#e9def8;--cream:#fff7e8;--ink:#352947;--gold:#e6d2a2}
+*{box-sizing:border-box}body{margin:0;font-family:Tahoma,Arial,sans-serif;background:linear-gradient(135deg,#f8f1ff,#fff9ec);color:var(--ink);text-align:center}
+header{padding:24px 12px 4px}h1{margin:0;color:var(--purple);font-size:clamp(27px,5vw,40px)}.sub{margin:10px}
+.wrap{max-width:700px;margin:auto;padding:12px}.card{background:#fff;border:2px solid #e4d8f5;border-radius:24px;padding:24px 14px;margin:16px 0;box-shadow:0 7px 0 #eee5f8}
+.bell{font-size:clamp(100px,25vw,175px);width:min(75vw,290px);height:min(75vw,290px);border-radius:50%;display:block;margin:22px auto;box-shadow:0 9px 0 #d8c9f1;border:8px solid white;cursor:pointer}
+.bell:active{transform:scale(.97)}.purple{background:var(--purple);color:#fff}.vanilla{background:var(--cream);color:var(--ink);border:2px solid var(--gold)}
+.big{font-size:clamp(25px,5vw,38px);font-weight:bold}.muted{opacity:.85;line-height:1.8}.status{padding:15px;border-radius:16px;background:#f5effc;font-size:20px;font-weight:bold;margin:12px 0}
+</style></head>
+<body>
+<header><h1>مسابقة المثنى مع الجرس 🔔</h1><p class="sub" id="teamTitle"></p></header>
+<div class="wrap"><section class="card">
+<div class="big">اضغطي الجرس عند ظهور السؤال!</div>
+<p class="muted">أول فريق يضغط الجرس يفوز بفرصة الإجابة. انتظري حتى تبدأ مقدّمة المسابقة السؤال.</p>
+<button id="bell" class="bell" onclick="pressBell()">🔔</button>
+<div id="bellStatus" class="status">جارٍ تجهيز الاتصال...</div>
+</section></div>
+<script type="module">
+const FIREBASE_CONFIG = null; // تضيف مقدّمة المسابقة إعدادات Firebase هنا قبل النشر
+const TEAM = 'vanilla';
+const TEAM_NAME = '🤍 جرس فريق الفانيلا';
+document.getElementById('teamTitle').textContent = TEAM_NAME;
+document.getElementById('bell').className = 'bell vanilla';
+let db, fb, active=false, claimed='';
+const statusEl=document.getElementById('bellStatus');
+function status(s){statusEl.textContent=s;}
+function name(t){return t==='lavender'?'💜 فريق اللافندر':'🤍 فريق الفانيلا';}
+async function init(){
+ if(!FIREBASE_CONFIG){status('الجرس يحتاج إعداد الاتصال المشترك من مقدّمة المسابقة.');return;}
+ try{
+  const appMod=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
+  const dbMod=await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
+  const app=appMod.initializeApp(FIREBASE_CONFIG);db=dbMod.getDatabase(app);fb=dbMod;
+  const ref=fb.ref(db,'mutannaBuzzer/state');
+  fb.onValue(ref,snap=>{
+   const s=snap.val()||{}; active=!!s.active; claimed=s.claimed||'';
+   if(!active)status('انتظري بدء السؤال من مقدّمة المسابقة…');
+   else if(claimed)status('🔔 تم الضغط أولًا بواسطة '+name(claimed));
+   else status('اضغطي الجرس الآن!');
+  });
+ }catch(e){status('تعذر الاتصال. تأكدي من إعدادات الاتصال.');console.error(e);}
+}
+async function pressBell(){
+ if(!db||!fb){status('الاتصال المشترك لم يُجهّز بعد.');return;}
+ if(!active){status('انتظري حتى تبدأ مقدّمة المسابقة السؤال.');return;}
+ const ref=fb.ref(db,'mutannaBuzzer/state');
+ try{
+  const result=await fb.runTransaction(ref,current=>{
+   if(!current||!current.active||current.claimed)return;
+   current.claimed=TEAM;current.locked=true;return current;
+  });
+  status(result.committed?'🎉 ضغطتِ أولًا! '+name(TEAM):'سبقك الفريق الآخر أو لم يبدأ السؤال بعد.');
+ }catch(e){status('تعذر إرسال الضغط. تحققي من الاتصال.');}
+}
+init();
+</script></body></html>
